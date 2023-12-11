@@ -4,26 +4,26 @@ import kang.onezero.tobyspring.user.domain.User;
 
 import java.sql.*;
 
-public class UserDao {
+public abstract class UserDao {
 
-    public static void main(String[] args) throws SQLException {
-        UserDao dao = new UserDao();
-
-        User user = new User();
-        user.setId("faker");
-        user.setName("이상혁");
-        user.setPassword("1234");
-
-        dao.add(user);
-
-        System.out.println(user.getId() + " 등록 성공");
-
-        User user2 = dao.get(user.getId());
-        System.out.println(user2.getName());
-        System.out.println(user2.getPassword());
-
-        System.out.println(user2.getId() + " 조회 성공");
-    }
+//    public static void main(String[] args) throws SQLException {
+//        UserDao dao = new UserDao();
+//
+//        User user = new User();
+//        user.setId("faker");
+//        user.setName("이상혁");
+//        user.setPassword("1234");
+//
+//        dao.add(user);
+//
+//        System.out.println(user.getId() + " 등록 성공");
+//
+//        User user2 = dao.get(user.getId());
+//        System.out.println(user2.getName());
+//        System.out.println(user2.getPassword());
+//
+//        System.out.println(user2.getId() + " 조회 성공");
+//    }
 
 
     public void add(User user) throws SQLException {
@@ -57,14 +57,11 @@ public class UserDao {
 
         rs.close();
         ps.close();
-        c.close();
+        c.close();기
 
         return user;
     }
 
-    private static Connection getConnection() throws SQLException {
-        Connection c = DriverManager.getConnection("jdbc:mysql://localhost:3306/toby_spring", "root", "1234");
-        return c;
-    }
+    public abstract Connection getConnection() throws SQLException;
 }
 

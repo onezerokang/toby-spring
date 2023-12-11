@@ -27,8 +27,7 @@ public class UserDao {
 
 
     public void add(User user) throws SQLException {
-//        Class.forName("com.mysql.jdbc.Driver");
-        Connection c = DriverManager.getConnection("jdbc:mysql://localhost:3306/toby_spring", "root", "1234");
+        Connection c = getConnection();
 
         PreparedStatement ps = c.prepareStatement(
                 "insert into users(id, name, password) values(?,?,?)");
@@ -43,8 +42,7 @@ public class UserDao {
     }
 
     public User get(String id) throws SQLException {
-//        Class.forName("com.mysql.jdbc.Driver");
-        Connection c = DriverManager.getConnection("jdbc:mysql://localhost:3306/toby_spring", "root", "1234");
+        Connection c = getConnection();
 
         PreparedStatement ps = c.prepareStatement(
                 "select * from users where id = ?");
@@ -63,4 +61,10 @@ public class UserDao {
 
         return user;
     }
+
+    private static Connection getConnection() throws SQLException {
+        Connection c = DriverManager.getConnection("jdbc:mysql://localhost:3306/toby_spring", "root", "1234");
+        return c;
+    }
 }
+

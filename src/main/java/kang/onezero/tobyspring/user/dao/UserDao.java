@@ -57,7 +57,7 @@ public abstract class UserDao {
 
         rs.close();
         ps.close();
-        c.close();기
+        c.close();
 
         return user;
     }

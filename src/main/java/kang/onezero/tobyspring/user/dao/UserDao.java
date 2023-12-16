@@ -40,6 +40,7 @@ public class UserDao {
 
         User user = null;
         if (rs.next()){
+            user = new User();
             user.setId(rs.getString("id"));
             user.setName(rs.getString("name"));
             user.setPassword(rs.getString("password"));

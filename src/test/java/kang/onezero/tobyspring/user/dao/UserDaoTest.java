@@ -1,6 +1,7 @@
 package kang.onezero.tobyspring.user.dao;
 
 import kang.onezero.tobyspring.user.domain.User;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.GenericXmlApplicationContext;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -10,11 +11,16 @@ import java.sql.SQLException;
 import static org.junit.jupiter.api.Assertions.*;
 
 class UserDaoTest {
+    private UserDao dao;
+
+    @BeforeEach
+    public void setUp() {
+        GenericXmlApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
+        this.dao = context.getBean("userDao", UserDao.class);
+    }
+
     @Test
     public void addAndGet() throws SQLException {
-        GenericXmlApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
-
-        UserDao dao = context.getBean("userDao", UserDao.class);
         User user1 = new User("faker", "이상혁", "1234");
         User user2 = new User("gumayusi", "이민형", "5678");
 
@@ -36,9 +42,6 @@ class UserDaoTest {
 
     @Test
     public void getUserFailure() throws SQLException {
-        GenericXmlApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
-
-        UserDao dao = context.getBean("userDao", UserDao.class);
         dao.deleteAll();
         assertEquals(dao.getCount(), 0);
 
@@ -50,9 +53,6 @@ class UserDaoTest {
 
     @Test
     public void count() throws SQLException {
-        GenericXmlApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
-
-        UserDao dao = context.getBean("userDao", UserDao.class);
         User user1 = new User("faker", "이상혁", "1234");
         User user2 = new User("zeus", "최우제", "5678");
         User user3 = new User("keria", "류민석", "9012");

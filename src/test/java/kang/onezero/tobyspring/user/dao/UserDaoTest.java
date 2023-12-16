@@ -3,6 +3,7 @@ package kang.onezero.tobyspring.user.dao;
 import kang.onezero.tobyspring.user.domain.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.GenericXmlApplicationContext;
+import org.springframework.dao.EmptyResultDataAccessException;
 
 import java.sql.SQLException;
 
@@ -32,6 +33,20 @@ class UserDaoTest {
         assertEquals(userget2.getName(), user2.getName());
         assertEquals(userget2.getPassword(), user2.getPassword());
     }
+
+    @Test
+    public void getUserFailure() throws SQLException {
+        GenericXmlApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
+
+        UserDao dao = context.getBean("userDao", UserDao.class);
+        dao.deleteAll();
+        assertEquals(dao.getCount(), 0);
+
+        assertThrows(EmptyResultDataAccessException.class, () -> {
+            dao.get("unknown_id");
+        });
+    }
+
 
     @Test
     public void count() throws SQLException {

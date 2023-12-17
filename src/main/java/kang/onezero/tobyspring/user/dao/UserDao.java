@@ -14,8 +14,21 @@ public class UserDao {
         this.dataSource = dataSource;
     }
 
-    public void add(User user) throws SQLException {
-        StatementStrategy st = new AddStatement(user);
+    // 내부 클래스에서 외부의 변수를 사용할 때는 외부 변수는 반드시 final 선언해줘야 한다.
+    public void add(final User user) throws SQLException {
+        class AddStatement implements StatementStrategy {
+            public PreparedStatement makePreparedStatement(Connection c) throws SQLException {
+                PreparedStatement ps = c.prepareStatement(
+                        "insert into users(id, name, password) values(?,?,?)");
+                ps.setString(1, user.getId());
+                ps.setString(2, user.getName());
+                ps.setString(3, user.getPassword());
+
+                return ps;
+            }
+        }
+
+        StatementStrategy st = new AddStatement();
         jdbcContextWithStatementStrategy(st);
     }
 

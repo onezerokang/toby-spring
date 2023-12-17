@@ -12,5 +12,9 @@
     </bean>
     <bean id="userDao" class="kang.onezero.tobyspring.user.dao.UserDao">
         <property name="dataSource" ref="dataSource" />
+        <property name="jdbcContext" ref="jdbcContext"/>
+    </bean>
+    <bean id="jdbcContext" class="kang.onezero.tobyspring.user.dao.JdbcContext">
+        <property name="dataSource" ref="dataSource" />
     </bean>
 </beans>

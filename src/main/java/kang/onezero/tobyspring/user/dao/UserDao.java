@@ -7,16 +7,20 @@ import javax.sql.DataSource;
 import java.sql.*;
 
 public class UserDao {
-
     private DataSource dataSource;
+    private JdbcContext jdbcContext;
 
     public void setDataSource(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
+    public void setJdbcContext(JdbcContext jdbcContext) {
+        this.jdbcContext = jdbcContext;
+    }
+
     // 내부 클래스에서 외부의 변수를 사용할 때는 외부 변수는 반드시 final 선언해줘야 한다.
     public void add(final User user) throws SQLException {
-        jdbcContextWithStatementStrategy(
+        this.jdbcContext.workWithStatementStrategy(
                 new StatementStrategy() {
                     public PreparedStatement makePreparedStatement(Connection c) throws SQLException {
                     PreparedStatement ps = c.prepareStatement(
@@ -58,7 +62,7 @@ public class UserDao {
     }
 
     public void deleteAll() throws SQLException {
-        jdbcContextWithStatementStrategy(
+        this.jdbcContext.workWithStatementStrategy(
             new StatementStrategy() {
                 @Override
                 public PreparedStatement makePreparedStatement(Connection c) throws SQLException {
@@ -101,36 +105,6 @@ public class UserDao {
                 try {
                     c.close();
                 } catch (SQLException e) {
-                }
-            }
-        }
-    }
-
-    public void jdbcContextWithStatementStrategy(StatementStrategy stat) throws SQLException {
-        Connection c = null;
-        PreparedStatement ps = null;
-
-        try {
-            c = dataSource.getConnection();
-            // 전략을 주입한 부분
-            ps = stat.makePreparedStatement(c);
-            // 전략을 주입한 부분
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw e;
-        } finally {
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (SQLException e) { // p.close() 메소드에서도 예외처리를 해줘야 한다. 그렇지 않으면 Connection을 close() 하지 못하고 메소드를 빠져나갈 수 있다.
-                }
-            }
-
-            if (c != null) {
-                try {
-                    c.close();
-                } catch (SQLException e) {
-
                 }
             }
         }

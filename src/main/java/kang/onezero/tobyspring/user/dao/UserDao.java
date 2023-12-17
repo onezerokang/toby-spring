@@ -15,18 +15,8 @@ public class UserDao {
     }
 
     public void add(User user) throws SQLException {
-        Connection c = dataSource.getConnection();
-
-        PreparedStatement ps = c.prepareStatement(
-                "insert into users(id, name, password) values(?,?,?)");
-        ps.setString(1, user.getId());
-        ps.setString(2, user.getName());
-        ps.setString(3, user.getPassword());
-
-        ps.executeUpdate();
-
-        ps.close();
-        c.close();
+        StatementStrategy st = new AddStatement(user);
+        jdbcContextWithStatementStrategy(st);
     }
 
     public User get(String id) throws SQLException {
@@ -59,7 +49,7 @@ public class UserDao {
         DeleteAllStatemnet st = new DeleteAllStatemnet(); // 선정한 전략 클래스의 오브젝트 생성
         jdbcContextWithStatementStrategy(st); // 컨텍스트 호출 전략 오브젝트 전달
     }
-    
+
     public int getCount() throws SQLException {
         Connection c = null;
         PreparedStatement ps = null;

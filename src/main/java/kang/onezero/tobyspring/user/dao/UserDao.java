@@ -11,11 +11,9 @@ public class UserDao {
     private JdbcContext jdbcContext;
 
     public void setDataSource(DataSource dataSource) {
+        this.jdbcContext = new JdbcContext();
+        this.jdbcContext.setDataSource(dataSource);
         this.dataSource = dataSource;
-    }
-
-    public void setJdbcContext(JdbcContext jdbcContext) {
-        this.jdbcContext = jdbcContext;
     }
 
     // 내부 클래스에서 외부의 변수를 사용할 때는 외부 변수는 반드시 final 선언해줘야 한다.

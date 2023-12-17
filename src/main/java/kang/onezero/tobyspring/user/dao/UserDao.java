@@ -6,7 +6,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import javax.sql.DataSource;
 import java.sql.*;
 
-public abstract class UserDao {
+public class UserDao {
 
     private DataSource dataSource;
 
@@ -56,35 +56,10 @@ public abstract class UserDao {
     }
 
     public void deleteAll() throws SQLException {
-        Connection c = null;
-        PreparedStatement ps = null;
-
-        try {
-            c = dataSource.getConnection();
-            ps = makeStatement(c);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            throw e;
-        } finally {
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (SQLException e) { // p.close() 메소드에서도 예외처리를 해줘야 한다. 그렇지 않으면 Connection을 close() 하지 못하고 메소드를 빠져나갈 수 있다.
-                }
-            }
-
-            if (c != null) {
-                try {
-                    c.close();
-                } catch (SQLException e) {
-
-                }
-            }
-        }
+        DeleteAllStatemnet st = new DeleteAllStatemnet(); // 선정한 전략 클래스의 오브젝트 생성
+        jdbcContextWithStatementStrategy(st); // 컨텍스트 호출 전략 오브젝트 전달
     }
-
-    abstract protected PreparedStatement makeStatement(Connection c) throws SQLException;
-
+    
     public int getCount() throws SQLException {
         Connection c = null;
         PreparedStatement ps = null;
@@ -118,6 +93,36 @@ public abstract class UserDao {
                 try {
                     c.close();
                 } catch (SQLException e) {
+                }
+            }
+        }
+    }
+
+    public void jdbcContextWithStatementStrategy(StatementStrategy stat) throws SQLException {
+        Connection c = null;
+        PreparedStatement ps = null;
+
+        try {
+            c = dataSource.getConnection();
+            // 전략을 주입한 부분
+            ps = stat.makePreparedStatement(c);
+            // 전략을 주입한 부분
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw e;
+        } finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) { // p.close() 메소드에서도 예외처리를 해줘야 한다. 그렇지 않으면 Connection을 close() 하지 못하고 메소드를 빠져나갈 수 있다.
+                }
+            }
+
+            if (c != null) {
+                try {
+                    c.close();
+                } catch (SQLException e) {
+
                 }
             }
         }

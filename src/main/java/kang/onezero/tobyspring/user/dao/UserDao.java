@@ -60,11 +60,15 @@ public class UserDao {
     }
 
     public void deleteAll() throws SQLException {
+        executeSQL("delete from users"); // 변하는 SQL 문장
+    }
+
+    private void executeSQL(final String query) throws SQLException {
         this.jdbcContext.workWithStatementStrategy(
             new StatementStrategy() {
                 @Override
                 public PreparedStatement makePreparedStatement(Connection c) throws SQLException {
-                    return c.prepareStatement("delete from users");
+                    return c.prepareStatement(query);
                 }
             }
         );

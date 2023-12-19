@@ -14,15 +14,10 @@ import java.sql.*;
 import java.util.List;
 
 public class UserDao {
-    private DataSource dataSource;
-    private JdbcContext jdbcContext;
     private JdbcTemplate jdbcTemplate;
 
     public void setDataSource(DataSource dataSource) {
-        this.jdbcContext = new JdbcContext();
-        this.jdbcContext.setDataSource(dataSource);
         this.jdbcTemplate = new JdbcTemplate(dataSource);
-        this.dataSource = dataSource;
     }
 
     public void add(final User user) {

@@ -16,6 +16,17 @@ import java.util.List;
 public class UserDao {
     private JdbcTemplate jdbcTemplate;
 
+    private RowMapper<User> userRowMapper = new RowMapper<User>() {
+        @Override
+        public User mapRow(ResultSet rs, int rowNum) throws SQLException {
+            User user = new User();
+            user.setId(rs.getString("id"));
+            user.setName(rs.getString("name"));
+            user.setPassword(rs.getString("password"));
+            return user;
+        }
+    };
+
     public void setDataSource(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
     }
@@ -26,17 +37,7 @@ public class UserDao {
 
     public User get(String id) throws SQLException {
         return this.jdbcTemplate.queryForObject("select * from users where id = ?",
-                new Object[]{id}, // SQL에 바인딩할 파리머터 값, 가변인자 대신 배열을 사용한다.
-                new RowMapper<User>() {
-                    @Override
-                    public User mapRow(ResultSet rs, int rowNum) throws SQLException {
-                        User user = new User();
-                        user.setId(rs.getString("id"));
-                        user.setName(rs.getString("name"));
-                        user.setPassword(rs.getString("password"));
-                        return user;
-                    }
-                });
+                new Object[]{id}, this.userRowMapper);
     }
 
     public void deleteAll() {
@@ -71,17 +72,7 @@ public class UserDao {
     }
 
     public List<User> getAll() {
-        return this.jdbcTemplate.query("select * from users order by id",
-                new RowMapper<User>() {
-                    @Override
-                    public User mapRow(ResultSet rs, int rowNum) throws SQLException {
-                        User user = new User();
-                        user.setId(rs.getString("id"));
-                        user.setName(rs.getString("name"));
-                        user.setPassword(rs.getString("password"));
-                        return user;
-                    }
-                });
+        return this.jdbcTemplate.query("select * from users order by id", this.userRowMapper);
     }
 }
 

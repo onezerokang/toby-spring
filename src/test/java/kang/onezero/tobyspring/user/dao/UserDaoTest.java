@@ -1,20 +1,20 @@
 package kang.onezero.tobyspring.user.dao;
 
-import jakarta.annotation.security.RunAs;
 import kang.onezero.tobyspring.user.domain.User;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.GenericXmlApplicationContext;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+import org.springframework.jdbc.support.SQLExceptionTranslator;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
+import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -30,7 +30,10 @@ class UserDaoTest {
     private ApplicationContext context; // 테스트 오브젝트가 만들어지고 나면 스프링 테스트 컨텍스트에 의해 자동으로 값이 주입된다.
 
     @Autowired
-    private UserDao dao;
+    private DataSource dataSource;
+
+    @Autowired
+    private UserDaoJdbc dao;
 
     private User user1;
     private User user2;
@@ -117,5 +120,33 @@ class UserDaoTest {
 
         dao.add(user3);
         assertEquals(dao.getCount(), 3);
+    }
+
+
+    // 학습 테스트
+    @Test
+    public void duplicateKey() {
+        dao.deleteAll();
+
+        assertThatThrownBy(() -> {
+            dao.add(user1);
+            dao.add(user1);
+        }).isInstanceOf(DuplicateKeyException.class);
+    }
+
+    // 학습 테스트
+    @Test
+    public void sqlExceptionTranslate() {
+        dao.deleteAll();
+
+        try {
+            dao.add(user1);
+            dao.add(user1);
+        } catch (DuplicateKeyException ex) {
+            SQLException sqlEx = (SQLException)ex.getRootCause();
+            SQLExceptionTranslator set = new SQLErrorCodeSQLExceptionTranslator(this.dataSource);
+
+            assertThat(set.translate(null, null, sqlEx)).isInstanceOf(DuplicateKeyException.class);
+        }
     }
 }

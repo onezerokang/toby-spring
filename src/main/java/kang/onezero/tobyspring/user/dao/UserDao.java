@@ -2,6 +2,8 @@ package kang.onezero.tobyspring.user.dao;
 
 import kang.onezero.tobyspring.user.domain.User;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
 
 import javax.sql.DataSource;
 import java.sql.*;
@@ -9,28 +11,17 @@ import java.sql.*;
 public class UserDao {
     private DataSource dataSource;
     private JdbcContext jdbcContext;
+    private JdbcTemplate jdbcTemplate;
 
     public void setDataSource(DataSource dataSource) {
         this.jdbcContext = new JdbcContext();
         this.jdbcContext.setDataSource(dataSource);
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.dataSource = dataSource;
     }
 
-    // 내부 클래스에서 외부의 변수를 사용할 때는 외부 변수는 반드시 final 선언해줘야 한다.
     public void add(final User user) throws SQLException {
-        this.jdbcContext.workWithStatementStrategy(
-                new StatementStrategy() {
-                    public PreparedStatement makePreparedStatement(Connection c) throws SQLException {
-                    PreparedStatement ps = c.prepareStatement(
-                            "insert into users(id, name, password) values(?,?,?)");
-                    ps.setString(1, user.getId());
-                    ps.setString(2, user.getName());
-                    ps.setString(3, user.getPassword());
-
-                    return ps;
-                }
-            }
-        );
+        this.jdbcTemplate.update("insert into users(id, name, password) values(?,?,?)", user.getId(), user.getName(), user.getPassword());
     }
 
     public User get(String id) throws SQLException {
@@ -60,7 +51,17 @@ public class UserDao {
     }
 
     public void deleteAll() throws SQLException {
-        this.jdbcContext.executeSQL("delete from users"); // 변하는 SQL 문장
+//        this.jdbcTemplate.update(
+//                new PreparedStatementCreator() {
+//                    @Override
+//                    public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+//                        return con.prepareStatement("delete from users");
+//                    }
+//                }
+//        );
+
+//        위 코드와 같다.
+        this.jdbcTemplate.update("delete from users");
     }
 
     public int getCount() throws SQLException {

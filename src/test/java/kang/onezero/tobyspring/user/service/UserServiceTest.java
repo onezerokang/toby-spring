@@ -34,11 +34,11 @@ class UserServiceTest {
     @BeforeEach
     public void setUp() {
         users = Arrays.asList(
-                new User("zeus", "최우제", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER-1, 0),
-                new User("oner", "문현준", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0),
-                new User("faker", "이상혁", "p3", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD-1),
-                new User("gumayusi", "이민형", "p4", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD),
-                new User("keria", "류민석", "p5", Level.GOLD, 100, Integer.MAX_VALUE)
+                new User("b_zeus", "최우제", "p1", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER-1, 0),
+                new User("j_oner", "문현준", "p2", Level.BASIC, MIN_LOGCOUNT_FOR_SILVER, 0),
+                new User("e_faker", "이상혁", "p3", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD-1),
+                new User("m_gumayusi", "이민형", "p4", Level.SILVER, 60, MIN_RECOMMEND_FOR_GOLD),
+                new User("g_keria", "류민석", "p5", Level.GOLD, 100, Integer.MAX_VALUE)
         );
     }
 
@@ -79,6 +79,23 @@ class UserServiceTest {
         assertThat(userUpdate.getLevel()).isEqualTo(expectedLevel);
     }
 
+    @Test
+    public void upgradeAllOrNoting() {
+        TestUserService testUserService = new TestUserService(users.get(3).getId());
+        testUserService.setUserDao(this.userDao);
+
+        userDao.deleteAll();
+        for(User user: users) userDao.add(user);
+
+        try {
+            testUserService.upgradeLevels();
+            fail("TestUserServiceException expected"); //
+        } catch (TestUserServiceException e) {
+            // TestService가 던지는 예외를 잡아서 계속 진행되도록 한다.
+        }
+        checkLevelUpgraded(users.get(1), false); // 예외가 발생하기 전에 레벨 변경이 있어ㄸ썬 사용자 레벨이 처음 상태로 바뀌었나 확인
+    }
+
     private void checkLevelUpgraded(User user, boolean upgraded) {
         User userUpdate = userDao.get(user.getId());
         if (upgraded) {
@@ -87,4 +104,21 @@ class UserServiceTest {
             assertThat(userUpdate.getLevel()).isEqualTo(user.getLevel());
         }
     }
+
+    static class TestUserService extends UserService {
+        private String id;
+
+        // 예외를 발생시킬 User 오브젝트의 id를 지정할 수 있게 만든다.
+        private TestUserService(String id) {
+            this.id = id;
+        }
+
+        @Override
+        protected void upgradeLevel(User user) {
+            if (user.getId().equals(this.id)) throw new TestUserServiceException();
+            super.upgradeLevel(user);
+        }
+    }
+
+    static class TestUserServiceException extends RuntimeException {}
 }

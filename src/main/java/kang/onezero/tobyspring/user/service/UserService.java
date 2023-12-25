@@ -3,7 +3,11 @@ package kang.onezero.tobyspring.user.service;
 import kang.onezero.tobyspring.user.dao.UserDao;
 import kang.onezero.tobyspring.user.domain.Level;
 import kang.onezero.tobyspring.user.domain.User;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import javax.sql.DataSource;
@@ -26,26 +30,24 @@ public class UserService {
         this.dataSource = dataSource;
     }
 
-    public void upgradeLevels() throws Exception {
-        TransactionSynchronizationManager.initSynchronization();
-        Connection c = DataSourceUtils.getConnection(dataSource);
-        c.setAutoCommit(false);
+    public void upgradeLevels() {
+        // JDBC 트랜잭션 추상 오브젝트 생성
+        PlatformTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+
+        // 트랜잭션 시작
+        TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
 
         try {
             List<User> users = userDao.getAll();
-            for (User user: users) {
+            for (User user : users) {
                 if (canUpgradeLevel(user)) {
                     upgradeLevel(user);
                 }
             }
-            c.commit();
-        } catch (Exception e) {
-            c.rollback();
+            transactionManager.commit(status);
+        } catch (RuntimeException e) {
+            transactionManager.rollback(status);
             throw e;
-        } finally {
-            DataSourceUtils.releaseConnection(c, dataSource);
-            TransactionSynchronizationManager.unbindResource(this.dataSource);
-            TransactionSynchronizationManager.clearSynchronization();
         }
     }
 

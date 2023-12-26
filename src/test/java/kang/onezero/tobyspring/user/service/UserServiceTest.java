@@ -3,7 +3,6 @@ package kang.onezero.tobyspring.user.service;
 import kang.onezero.tobyspring.user.dao.UserDao;
 import kang.onezero.tobyspring.user.domain.Level;
 import kang.onezero.tobyspring.user.domain.User;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,12 +16,11 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static kang.onezero.tobyspring.user.service.UserService.*;
+import static kang.onezero.tobyspring.user.service.UserServiceImpl.*;
 import static org.assertj.core.api.Assertions.*;
 
 
@@ -34,10 +32,10 @@ class UserServiceTest {
     UserService userService;
 
     @Autowired
-    UserDao userDao;
+    UserServiceImpl userServiceImpl;
 
     @Autowired
-    DataSource dataSource;
+    UserDao userDao;
 
     @Autowired
     PlatformTransactionManager transactionManager;
@@ -82,7 +80,7 @@ class UserServiceTest {
         for (User user: users) userDao.add(user);
 
         MockMailSender mockMailSender = new MockMailSender();
-        userService.setMailSender(mockMailSender);
+        userServiceImpl.setMailSender(mockMailSender);
 
         userService.upgradeLevels();
 
@@ -93,7 +91,7 @@ class UserServiceTest {
         checkLevelUpgraded(users.get(4), false);
 
         List<String> requests = mockMailSender.getRequests();
-        assertThat(requests.size()).isEqualTo(2);
+        assertThat(requests).hasSize(2);
         assertThat(requests.get(0)).isEqualTo(users.get(1).getEmail());
         assertThat(requests.get(1)).isEqualTo(users.get(3).getEmail());
     }
@@ -125,14 +123,17 @@ class UserServiceTest {
     public void upgradeAllOrNoting() throws Exception {
         TestUserService testUserService = new TestUserService(users.get(3).getId());
         testUserService.setUserDao(this.userDao);
-        testUserService.setTransactionManager(transactionManager);
         testUserService.setMailSender(mailSender);
+
+        UserServiceTx txUserService = new UserServiceTx();
+        txUserService.setTransactionManager(transactionManager);
+        txUserService.setUserService(testUserService);
 
         userDao.deleteAll();
         for(User user: users) userDao.add(user);
 
         try {
-            testUserService.upgradeLevels();
+            txUserService.upgradeLevels();
             fail("TestUserServiceException expected"); //
         } catch (TestUserServiceException e) {
             // TestService가 던지는 예외를 잡아서 계속 진행되도록 한다.
@@ -149,7 +150,7 @@ class UserServiceTest {
         }
     }
 
-    static class TestUserService extends UserService {
+    static class TestUserService extends UserServiceImpl {
         private String id;
 
         // 예외를 발생시킬 User 오브젝트의 id를 지정할 수 있게 만든다.

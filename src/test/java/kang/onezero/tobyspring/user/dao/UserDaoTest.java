@@ -1,5 +1,6 @@
 package kang.onezero.tobyspring.user.dao;
 
+import kang.onezero.tobyspring.user.domain.Level;
 import kang.onezero.tobyspring.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,9 +42,9 @@ class UserDaoTest {
 
     @BeforeEach
     public void setUp() {
-        this.user1 = new User("faker", "이상혁", "1234");
-        this.user2 = new User("zeus", "최우제", "5678");
-        this.user3 = new User("keria", "류민석", "9012");
+        this.user1 = new User("faker", "이상혁", "faker@t1.com", "1234", Level.BASIC, 1, 0);
+        this.user2 = new User("zeus", "최우제", "zeus@t1.com", "5678",  Level.SILVER, 55, 10);
+        this.user3 = new User("keria", "류민석", "keria@t1.com", "9012",  Level.GOLD, 100, 40);
     }
 
     @Test
@@ -56,12 +57,10 @@ class UserDaoTest {
         assertEquals(dao.getCount(), 2); // getCount 테스트2
 
         User userget1 = dao.get(user1.getId());
-        assertEquals(userget1.getName(), user1.getName());
-        assertEquals(userget1.getPassword(), user1.getPassword());
+        checkSameUser(userget1, user1);
 
         User userget2 = dao.get(user2.getId());
-        assertEquals(userget2.getName(), user2.getName());
-        assertEquals(userget2.getPassword(), user2.getPassword());
+        checkSameUser(userget2, user2);
     }
 
     @Test
@@ -90,10 +89,36 @@ class UserDaoTest {
         checkSameUser(user2, users3.get(2));
     }
 
+    @Test
+    public void update() {
+        dao.deleteAll();
+
+        dao.add(user1);
+        dao.add(user2);
+
+        user1.setName("문현준");
+        user1.setEmail("oner@t1.com");
+        user1.setPassword("oner");
+        user1.setLevel(Level.GOLD);
+        user1.setLogin(1000);
+        user1.setRecommend(999);
+        dao.update(user1);
+
+        User user1Update = dao.get(user1.getId());
+        checkSameUser(user1, user1Update);
+
+        User user2same = dao.get(user2.getId());
+        checkSameUser(user2, user2same);
+    }
+
     private void checkSameUser(User user1, User user2) {
         assertThat(user1.getId()).isEqualTo(user2.getId());
         assertThat(user1.getName()).isEqualTo(user2.getName());
+        assertThat(user1.getEmail()).isEqualTo(user2.getEmail());
         assertThat(user1.getPassword()).isEqualTo(user2.getPassword());
+        assertThat(user1.getLevel()).isEqualTo(user2.getLevel());
+        assertThat(user1.getLogin()).isEqualTo(user2.getLogin());
+        assertThat(user1.getRecommend()).isEqualTo(user2.getRecommend());
     }
 
     @Test

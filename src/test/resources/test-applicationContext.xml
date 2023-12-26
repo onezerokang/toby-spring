@@ -3,7 +3,7 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans
        http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
-<!--    <bean id="connectionMaker" class="kang.onezero.tobyspring.user.dao.DConnectionMaker"/>-->
+    <!--    <bean id="connectionMaker" class="kang.onezero.tobyspring.user.dao.DConnectionMaker"/>-->
     <bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
         <property name="driverClass" value="com.mysql.cj.jdbc.Driver" />
         <property name="url" value="jdbc:mysql://localhost/toby_spring" />
@@ -21,7 +21,5 @@
     <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
         <property name="dataSource" ref="dataSource" />
     </bean>
-    <bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
-        <property name="host" ref="mail.server.com" />
-    </bean>
+    <bean id="mailSender" class="kang.onezero.tobyspring.user.service.DummyMailSender" />
 </beans>

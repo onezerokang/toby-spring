@@ -11,7 +11,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -74,26 +73,33 @@ class UserServiceTest {
     }
 
     @Test
-    @DirtiesContext // 컨텍스트의 DI 설정을 변경하는 테스트라는 것을 알려준다.
     public void upgradeLevels() throws Exception {
-        userDao.deleteAll();
-        for (User user: users) userDao.add(user);
+        // 고립된 테스트에서는 테스트 대상 오브젝트를 직접 생성하면 된다.
+        UserServiceImpl userServiceImpl = new UserServiceImpl();
+
+        // 목 오브젝트로 만든 UserDao를 직접 DI 해준다.
+        MockUserDao mockUserDao = new MockUserDao(this.users);
+        userServiceImpl.setUserDao(mockUserDao);
 
         MockMailSender mockMailSender = new MockMailSender();
         userServiceImpl.setMailSender(mockMailSender);
 
-        userService.upgradeLevels();
+        userServiceImpl.upgradeLevels();
 
-        checkLevelUpgraded(users.get(0), false);
-        checkLevelUpgraded(users.get(1), true);
-        checkLevelUpgraded(users.get(2), false);
-        checkLevelUpgraded(users.get(3), true);
-        checkLevelUpgraded(users.get(4), false);
+        List<User> updated = mockUserDao.getUpdated();
+        assertThat(updated).hasSize(2);
+        checkUserAndLevel(updated.get(0), "j_oner", Level.SILVER);
+        checkUserAndLevel(updated.get(1), "m_gumayusi", Level.GOLD);
 
         List<String> requests = mockMailSender.getRequests();
         assertThat(requests).hasSize(2);
         assertThat(requests.get(0)).isEqualTo(users.get(1).getEmail());
         assertThat(requests.get(1)).isEqualTo(users.get(3).getEmail());
+    }
+
+    private void checkUserAndLevel(User updated, String expectedId, Level expectedLevel) {
+        assertThat(updated.getId()).isEqualTo(expectedId);
+        assertThat(updated.getLevel()).isEqualTo(expectedLevel);
     }
 
     @Test
@@ -166,4 +172,27 @@ class UserServiceTest {
     }
 
     static class TestUserServiceException extends RuntimeException {}
+
+    static class MockUserDao implements UserDao {
+        private List<User> users; // 레벨 업그레이드 후보 User 오브젝트 목록
+        private List<User> updated = new ArrayList<>(); // 업그레드 대상 오브젝트를 지정해둘 목록
+
+        private MockUserDao(List<User> users) { this.users = users; }
+
+        public List<User> getUpdated() {
+            return this.updated;
+        }
+
+        // 스텁 기능 제공
+        public List<User> getAll() { return this.users; }
+
+        // 목 오브젝트 기능 제공
+        public void update(User user) { updated.add(user); }
+
+        // 테스트에 사용되지 않는 메소드
+        public void add(User user) { throw new UnsupportedOperationException(); }
+        public User get(String id) { throw new UnsupportedOperationException(); }
+        public void deleteAll() { throw new UnsupportedOperationException(); }
+        public int getCount() { throw new UnsupportedOperationException(); }
+    }
 }

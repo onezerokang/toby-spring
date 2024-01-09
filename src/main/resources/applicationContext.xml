@@ -13,9 +13,11 @@
     <bean id="userDao" class="kang.onezero.tobyspring.user.dao.UserDaoJdbc">
         <property name="dataSource" ref="dataSource" />
     </bean>
-    <bean id="userService" class="kang.onezero.tobyspring.user.service.UserServiceTx">
+    <bean id="userService" class="kang.onezero.tobyspring.user.service.TxProxyFactoryBean">
+        <property name="target" ref="userServiceImpl" />
         <property name="transactionManager" ref="transactionManager" />
-        <property name="userService" ref="userServiceImpl" />
+        <property name="pattern" value="upgradeLevels" />
+        <property name="serviceInterface" value="kang.onezero.tobyspring.user.service.UserService" />
     </bean>
     <bean id="userServiceImpl" class="kang.onezero.tobyspring.user.service.UserServiceImpl">
         <property name="userDao" ref="userDao" />

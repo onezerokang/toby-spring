@@ -13,11 +13,17 @@
     <bean id="userDao" class="kang.onezero.tobyspring.user.dao.UserDaoJdbc">
         <property name="dataSource" ref="dataSource" />
     </bean>
-    <bean id="userService" class="kang.onezero.tobyspring.user.service.TxProxyFactoryBean">
+    <bean id="userService" class="org.springframework.aop.framework.ProxyFactoryBean">
         <property name="target" ref="userServiceImpl" />
-        <property name="transactionManager" ref="transactionManager" />
-        <property name="pattern" value="upgradeLevels" />
-        <property name="serviceInterface" value="kang.onezero.tobyspring.user.service.UserService" />
+        <!--
+        어드바이스와 어드바이저를 동시에 설정해줄 수 있는 프로퍼티.
+        리스트에 어드바이스나 어드바이저의 빈 아이디를 값으로 넣어주면 된다.
+        기존의 ref 속성을 사용하는 DI와는 방식이 다름에 주의해야 한다.    -->
+        <property name="interceptorNames">
+            <list>
+                <value>transactionAdvisor</value>
+            </list>
+        </property>
     </bean>
     <bean id="userServiceImpl" class="kang.onezero.tobyspring.user.service.UserServiceImpl">
         <property name="userDao" ref="userDao" />
@@ -29,4 +35,18 @@
     <bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
         <property name="host" value="mail.server.com" />
     </bean>
+    <bean id="transactionAdvice" class="kang.onezero.tobyspring.user.service.TransactionAdvice">
+        <property name="transactionManager" ref="transactionManager" />
+    </bean>
+
+    <bean id="transactionPointcut" class="org.springframework.aop.support.NameMatchMethodPointcut">
+        <property name="mappedName" value="upgrade*" />
+    </bean>
+
+    <bean id="transactionAdvisor" class="org.springframework.aop.support.DefaultPointcutAdvisor">
+        <property name="advice" ref="transactionAdvice" />
+        <property name="pointcut" ref="transactionPointcut" />
+    </bean>
+
+
 </beans>

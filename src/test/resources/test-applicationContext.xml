@@ -14,9 +14,8 @@
         <property name="dataSource" ref="dataSource" />
     </bean>
     <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator" />
-    <bean id="transactionPointcut" class="kang.onezero.tobyspring.user.service.NameMatchClassMethodPointcut">
-        <property name="mappedClassName" value="*ServiceImpl" /> <!--   클래스 이름 패턴     -->
-        <property name="mappedName" value="upgrade*" /> <!--   메소드 이름 패턴     -->
+    <bean id="transactionPointcut" class="org.springframework.aop.aspectj.AspectJExpressionPointcut">
+        <property name="expression" value="execution(* *..*ServiceImpl.upgrade*(..))" />
     </bean>
     <bean id="testUserService"
           class="kang.onezero.tobyspring.user.service.UserServiceTest$TestUserServiceImpl"

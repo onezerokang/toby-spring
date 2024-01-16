@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,7 +19,6 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -39,6 +37,9 @@ class UserServiceTest {
     
     @Autowired
     UserService userService;
+
+    @Autowired
+    UserService testUserService;
 
     @Autowired
     UserDao userDao;
@@ -161,26 +162,16 @@ class UserServiceTest {
     }
 
     @Test
-    @DirtiesContext // 다이내믹 프록시 팩토리빈을 직접 만들어 사용할 때는 없앴다가 다시 등장한 컨텍스트 무효화 어노테이션
     public void upgradeAllOrNoting() throws Exception {
-        TestUserService testUserService = new TestUserService(users.get(3).getId());
-        testUserService.setUserDao(this.userDao);
-        testUserService.setMailSender(mailSender);
-
-        ProxyFactoryBean txProxyFactoryBean = context.getBean("&userService", ProxyFactoryBean.class);
-        txProxyFactoryBean.setTarget(testUserService);
-        UserService txUserService = (UserService) txProxyFactoryBean.getObject();
-
         userDao.deleteAll();
         for(User user: users) userDao.add(user);
 
         try {
-            txUserService.upgradeLevels();
-            fail("TestUserServiceException expected"); //
+            this.testUserService.upgradeLevels();
+            fail("TestUserServiceException expected");
         } catch (TestUserServiceException e) {
-            // TestService가 던지는 예외를 잡아서 계속 진행되도록 한다.
         }
-        checkLevelUpgraded(users.get(1), false); // 예외가 발생하기 전에 레벨 변경이 있어ㄸ썬 사용자 레벨이 처음 상태로 바뀌었나 확인
+        checkLevelUpgraded(users.get(1), false);
     }
 
     private void checkLevelUpgraded(User user, boolean upgraded) {
@@ -192,13 +183,8 @@ class UserServiceTest {
         }
     }
 
-    static class TestUserService extends UserServiceImpl {
-        private String id;
-
-        // 예외를 발생시킬 User 오브젝트의 id를 지정할 수 있게 만든다.
-        private TestUserService(String id) {
-            this.id = id;
-        }
+    static class TestUserServiceImpl extends UserServiceImpl {
+        private String id = "m_gumayusi"; // 텍스트 픽스쳐의 users(3)의 id 값을 고정
 
         @Override
         protected void upgradeLevel(User user) {

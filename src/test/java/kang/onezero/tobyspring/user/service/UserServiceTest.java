@@ -11,6 +11,7 @@ import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
@@ -183,6 +184,11 @@ class UserServiceTest {
         }
     }
 
+    @Test
+    public void readOnlyTransactionAttribute() {
+        assertThatThrownBy(() -> testUserService.getAll()).isInstanceOf(TransientDataAccessResourceException.class);
+    }
+
     static class TestUserServiceImpl extends UserServiceImpl {
         private String id = "m_gumayusi"; // 텍스트 픽스쳐의 users(3)의 id 값을 고정
 
@@ -190,6 +196,14 @@ class UserServiceTest {
         protected void upgradeLevel(User user) {
             if (user.getId().equals(this.id)) throw new TestUserServiceException();
             super.upgradeLevel(user);
+        }
+
+        @Override
+        public List<User> getAll() {
+            for (User user: super.getAll()) {
+                super.update(user);
+            }
+            return null;
         }
     }
 

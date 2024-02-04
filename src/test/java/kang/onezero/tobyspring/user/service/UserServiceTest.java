@@ -20,6 +20,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.util.ArrayList;
@@ -210,16 +211,11 @@ class UserServiceTest {
     }
 
     @Test
+    @Transactional
     public void transactionSync() {
-        DefaultTransactionDefinition txDefinition = new DefaultTransactionDefinition();
-        TransactionStatus txStatus = transactionManager.getTransaction(txDefinition);
-
         userService.deleteAll();
-
         userService.add(users.get(0));
         userService.add(users.get(1));
-
-        transactionManager.commit(txStatus);
     }
 
     static class TestUserServiceException extends RuntimeException {}

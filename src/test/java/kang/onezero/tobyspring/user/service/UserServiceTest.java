@@ -3,12 +3,15 @@ package kang.onezero.tobyspring.user.service;
 import kang.onezero.tobyspring.user.dao.UserDao;
 import kang.onezero.tobyspring.user.domain.Level;
 import kang.onezero.tobyspring.user.domain.User;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
@@ -16,14 +19,17 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
-import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static kang.onezero.tobyspring.user.service.UserService.*;
+import static kang.onezero.tobyspring.user.service.UserServiceImpl.*;
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 
 @SpringBootTest
@@ -31,13 +37,16 @@ import static org.assertj.core.api.Assertions.*;
 @ContextConfiguration(locations = "/test-applicationContext.xml")
 class UserServiceTest {
     @Autowired
+    ApplicationContext context; // 팩토리 빈을 가져오려면 애플리케이션 컨텍스트가 필요하다.
+    
+    @Autowired
     UserService userService;
 
     @Autowired
-    UserDao userDao;
+    UserService testUserService;
 
     @Autowired
-    DataSource dataSource;
+    UserDao userDao;
 
     @Autowired
     PlatformTransactionManager transactionManager;
@@ -76,26 +85,61 @@ class UserServiceTest {
     }
 
     @Test
-    @DirtiesContext // 컨텍스트의 DI 설정을 변경하는 테스트라는 것을 알려준다.
     public void upgradeLevels() throws Exception {
-        userDao.deleteAll();
-        for (User user: users) userDao.add(user);
+        // 고립된 테스트에서는 테스트 대상 오브젝트를 직접 생성하면 된다.
+        UserServiceImpl userServiceImpl = new UserServiceImpl();
+
+        // 목 오브젝트로 만든 UserDao를 직접 DI 해준다.
+        MockUserDao mockUserDao = new MockUserDao(this.users);
+        userServiceImpl.setUserDao(mockUserDao);
 
         MockMailSender mockMailSender = new MockMailSender();
-        userService.setMailSender(mockMailSender);
+        userServiceImpl.setMailSender(mockMailSender);
 
-        userService.upgradeLevels();
+        userServiceImpl.upgradeLevels();
 
-        checkLevelUpgraded(users.get(0), false);
-        checkLevelUpgraded(users.get(1), true);
-        checkLevelUpgraded(users.get(2), false);
-        checkLevelUpgraded(users.get(3), true);
-        checkLevelUpgraded(users.get(4), false);
+        List<User> updated = mockUserDao.getUpdated();
+        assertThat(updated).hasSize(2);
+        checkUserAndLevel(updated.get(0), "j_oner", Level.SILVER);
+        checkUserAndLevel(updated.get(1), "m_gumayusi", Level.GOLD);
 
         List<String> requests = mockMailSender.getRequests();
-        assertThat(requests.size()).isEqualTo(2);
+        assertThat(requests).hasSize(2);
         assertThat(requests.get(0)).isEqualTo(users.get(1).getEmail());
         assertThat(requests.get(1)).isEqualTo(users.get(3).getEmail());
+    }
+
+    @Test
+    public void mockUpgradeLevels() {
+        UserServiceImpl userServiceImpl = new UserServiceImpl();
+
+        UserDao mockUserDao = mock(UserDao.class);
+        when(mockUserDao.getAll()).thenReturn(this.users);
+        userServiceImpl.setUserDao(mockUserDao);
+
+        MailSender mockMailSender = mock(MailSender.class);
+        userServiceImpl.setMailSender(mockMailSender);
+
+        userServiceImpl.upgradeLevels();
+
+        verify(mockUserDao, times(2)).update(any(User.class));
+        verify(mockUserDao, times(2)).update(any(User.class));
+        verify(mockUserDao).update(users.get(1));
+        assertThat(users.get(1).getLevel()).isEqualTo(Level.SILVER);
+        verify(mockUserDao).update(users.get(3));
+        assertThat(users.get(3).getLevel()).isEqualTo(Level.GOLD);
+
+        ArgumentCaptor<SimpleMailMessage> mailMessageArg =
+                ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mockMailSender, times(2)).send(mailMessageArg.capture());
+        List<SimpleMailMessage> mailMessages = mailMessageArg.getAllValues();
+        assertThat(mailMessages.get(0).getTo()[0]).isEqualTo(users.get(1).getEmail());
+        assertThat(mailMessages.get(1).getTo()[0]).isEqualTo(users.get(3).getEmail());
+    }
+
+    private void checkUserAndLevel(User updated, String expectedId, Level expectedLevel) {
+        assertThat(updated.getId()).isEqualTo(expectedId);
+        assertThat(updated.getLevel()).isEqualTo(expectedLevel);
     }
 
     @Test
@@ -123,21 +167,15 @@ class UserServiceTest {
 
     @Test
     public void upgradeAllOrNoting() throws Exception {
-        TestUserService testUserService = new TestUserService(users.get(3).getId());
-        testUserService.setUserDao(this.userDao);
-        testUserService.setTransactionManager(transactionManager);
-        testUserService.setMailSender(mailSender);
-
         userDao.deleteAll();
         for(User user: users) userDao.add(user);
 
         try {
-            testUserService.upgradeLevels();
-            fail("TestUserServiceException expected"); //
+            this.testUserService.upgradeLevels();
+            fail("TestUserServiceException expected");
         } catch (TestUserServiceException e) {
-            // TestService가 던지는 예외를 잡아서 계속 진행되도록 한다.
         }
-        checkLevelUpgraded(users.get(1), false); // 예외가 발생하기 전에 레벨 변경이 있어ㄸ썬 사용자 레벨이 처음 상태로 바뀌었나 확인
+        checkLevelUpgraded(users.get(1), false);
     }
 
     private void checkLevelUpgraded(User user, boolean upgraded) {
@@ -149,20 +187,59 @@ class UserServiceTest {
         }
     }
 
-    static class TestUserService extends UserService {
-        private String id;
+    @Test
+    public void readOnlyTransactionAttribute() {
+        assertThatThrownBy(() -> testUserService.getAll()).isInstanceOf(TransientDataAccessResourceException.class);
+    }
 
-        // 예외를 발생시킬 User 오브젝트의 id를 지정할 수 있게 만든다.
-        private TestUserService(String id) {
-            this.id = id;
-        }
+    static class TestUserServiceImpl extends UserServiceImpl {
+        private String id = "m_gumayusi"; // 텍스트 픽스쳐의 users(3)의 id 값을 고정
 
         @Override
         protected void upgradeLevel(User user) {
             if (user.getId().equals(this.id)) throw new TestUserServiceException();
             super.upgradeLevel(user);
         }
+
+        @Override
+        public List<User> getAll() {
+            for (User user: super.getAll()) {
+                super.update(user);
+            }
+            return null;
+        }
+    }
+
+    @Test
+    @Transactional
+    public void transactionSync() {
+        userService.deleteAll();
+        userService.add(users.get(0));
+        userService.add(users.get(1));
     }
 
     static class TestUserServiceException extends RuntimeException {}
+
+    static class MockUserDao implements UserDao {
+        private List<User> users; // 레벨 업그레이드 후보 User 오브젝트 목록
+        private List<User> updated = new ArrayList<>(); // 업그레드 대상 오브젝트를 지정해둘 목록
+
+        private MockUserDao(List<User> users) { this.users = users; }
+
+        public List<User> getUpdated() {
+            return this.updated;
+        }
+
+        // 스텁 기능 제공
+        public List<User> getAll() { return this.users; }
+
+        // 목 오브젝트 기능 제공
+        public void update(User user) { updated.add(user); }
+
+        // 테스트에 사용되지 않는 메소드
+        public void add(User user) { throw new UnsupportedOperationException(); }
+        public User get(String id) { throw new UnsupportedOperationException(); }
+        public void deleteAll() { throw new UnsupportedOperationException(); }
+        public int getCount() { throw new UnsupportedOperationException(); }
+    }
 }
